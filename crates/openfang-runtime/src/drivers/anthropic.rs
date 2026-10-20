@@ -93,6 +93,9 @@ enum ApiContentBlock {
     /// one (e.g. legacy sessions saved before this field was tracked).
     #[serde(rename = "thinking")]
     Thinking { thinking: String, signature: String },
+    /// MiniMax also returns thinking blocks without a signature.
+    #[serde(rename = "thinking")]
+    UnsignedThinking { thinking: String },
     /// Redacted (encrypted) thinking block echoed back to the API.
     ///
     /// Anthropic returns these when the model decides to hide reasoning;
@@ -216,7 +219,7 @@ impl LlmDriver for AnthropicDriver {
             .messages
             .iter()
             .filter(|m| m.role != Role::System)
-            .map(convert_message)
+            .map(|message| convert_message_for_model(message, &request.model))
             .collect();
 
         // Build tools
@@ -324,7 +327,7 @@ impl LlmDriver for AnthropicDriver {
             .messages
             .iter()
             .filter(|m| m.role != Role::System)
-            .map(convert_message)
+            .map(|message| convert_message_for_model(message, &request.model))
             .collect();
 
         let api_tools: Vec<ApiTool> = request
@@ -678,8 +681,13 @@ fn ensure_object(v: &serde_json::Value) -> serde_json::Value {
     }
 }
 
-/// Convert an OpenFang Message to an Anthropic API message.
+#[cfg(test)]
 fn convert_message(msg: &Message) -> ApiMessage {
+    convert_message_for_model(msg, "")
+}
+
+/// Convert a message, retaining MiniMax thinking even without a signature.
+fn convert_message_for_model(msg: &Message, model: &str) -> ApiMessage {
     let role = match msg.role {
         Role::User => "user",
         Role::Assistant => "assistant",
@@ -724,6 +732,13 @@ fn convert_message(msg: &Message) -> ApiMessage {
                         signature,
                         ..
                     } => {
+                        if signature.is_none()
+                            && matches!(model, "MiniMax-M3.1-Flash" | "MiniMax-M3")
+                        {
+                            return Some(ApiContentBlock::UnsignedThinking {
+                                thinking: thinking.clone(),
+                            });
+                        }
                         // Anthropic's extended-thinking spec requires the
                         // verbatim `signature` to accompany any thinking block
                         // resubmitted in conversation history. Without one,
