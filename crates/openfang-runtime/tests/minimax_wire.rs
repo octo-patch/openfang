@@ -236,7 +236,9 @@ async fn capture_request(model: &str, endpoint: &str, stream: bool) {
             .and_then(|messages| {
                 messages.iter().find_map(|message| {
                     message["content"].as_array().and_then(|parts| {
-                        parts.iter().find_map(|part| part["image_url"]["url"].as_str())
+                        parts.iter().find_map(|part| {
+                        part["image_url"]["url"].as_str()
+                    })
                     })
                 })
             });
