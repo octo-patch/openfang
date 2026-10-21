@@ -130,7 +130,8 @@ async fn capture_request(model: &str, endpoint: &str, stream: bool) {
         provider: if messages_api { "anthropic" } else { "minimax" }.into(),
         api_key: Some("fixture-key".into()),
         base_url: Some(format!("http://{address}{path}")),
-        ..Default::default()
+        skip_permissions: true,
+        subprocess_timeout_secs: None,
     })
     .unwrap();
     let current = matches!(model, "MiniMax-M3.1-Flash" | "MiniMax-M3");
