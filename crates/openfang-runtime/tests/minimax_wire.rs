@@ -231,15 +231,15 @@ async fn capture_request(model: &str, endpoint: &str, stream: bool) {
             "call_1"
         );
     } else if current {
-        let image_url = payload["messages"]
-            .as_array()
-            .and_then(|messages| {
-                messages.iter().find_map(|message| {
-                    message["content"].as_array().and_then(|parts| {
-                        parts.iter().find_map(|part| part["image_url"]["url"].as_str())
-                    })
+        let image_url = payload["messages"].as_array().and_then(|messages| {
+            messages.iter().find_map(|message| {
+                message["content"].as_array().and_then(|parts| {
+                    parts
+                        .iter()
+                        .find_map(|part| part["image_url"]["url"].as_str())
                 })
-            });
+            })
+        });
         assert_eq!(
             image_url,
             Some("data:image/png;base64,aGVsbG8="),
